@@ -50,7 +50,7 @@ public class CassandraApi {
         }
         raf.close();
     }
-    public void loadData(RandomAccessFile raf, long numBytes, int splitno, String urlString) throws IOException{
+    private void loadData(RandomAccessFile raf, long numBytes, int splitno, String urlString) throws IOException{
         byte[] buf = new byte[(int)numBytes];
         int val = raf.read(buf);
         if(val != -1){
@@ -69,7 +69,7 @@ public class CassandraApi {
     public void FetchData(String opFile, String urlString) throws IOException{
         String scql = "SELECT part_number, url, slice from simplex.contents where url = '"+ urlString +"'";
         OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream(opFile), "UTF-8");
-        SimpleStatement ss = (SimpleStatement) new SimpleStatement(scql)/*.setReadTimeoutMillis(65000)*/;
+        SimpleStatement ss =  new SimpleStatement(scql);
         ss.setFetchSize(5);
         ResultSet rs = session.execute(ss);
         for(Row row : rs){
