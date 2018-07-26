@@ -5,60 +5,57 @@ import java.io.*;
 public class CassandraApi {
     private static Session session = null;
     private static Cluster cluster = null;
-    private static String keySpace = "";
     private PreparedStatement stmt = null;
     public void init() {
-        cluster = Cluster.builder()
+        cluster = Cluster.builder() // connecting to the cluster
                 .addContactPoint("127.0.0.1")
                 .build();
         session = cluster.connect();
     }
 
     public void createTable() {
-        String createTableQueryString = "CREATE TABLE IF NOT EXISTS simplex.contents (" +
+        String createTableQueryString = "CREATE TABLE IF NOT EXISTS VoyagerLabs.contents (" + // creating a table if not exists in keyspace.
                 "  part_number int," +
                 "  url varchar," +
                 "  slice text," +
-                "  PRIMARY KEY (url, part_number));";
+                "  PRIMARY KEY (url, part_number));"; // partitioned by Url
         session.execute(createTableQueryString);
     }
 
-    public void createKeySpace() {
-        String createKeySpaceQueryString = "CREATE KEYSPACE IF NOT EXISTS simplex WITH replication " +
-                "                    = {'class':'SimpleStrategy', 'replication_factor':3};";
+    public void createKeySpace() { //creating keyspace if not exist.
+        String createKeySpaceQueryString = "CREATE KEYSPACE IF NOT EXISTS VoyagerLabs WITH replication " +
+                "                    = {'class':'SimpleStrategy', 'replication_factor':3};"; // replicate by 3 nodes
         session.execute(createKeySpaceQueryString);
     }
 
     public void InsertData(String ipFile, int chunkSize, String urlString) throws IOException {
-        String insertQuery = "INSERT INTO simplex.contents (part_number, url, slice) "
+        String insertQuery = "INSERT INTO VoyagerLabs.contents (part_number, url, slice) "
                 + "VALUES (?,?,?) ";
         stmt  = session.prepare(insertQuery);
-        File fName = new File(ipFile);
-        RandomAccessFile raf = new RandomAccessFile(ipFile,"r");
-        long sourceSize = raf.length();
-        int maxReadBufferSize = chunkSize;
-        long numReads = sourceSize/maxReadBufferSize;
-        long remainingBytes = sourceSize % maxReadBufferSize;
+        RandomAccessFile fileReader = new RandomAccessFile(ipFile,"r");
+        long sourceSize = fileReader.length(); // getting source file size
+        long numOfReads = sourceSize/chunkSize; // calculating how many reads according to chunk size
+        long remainingBytes = sourceSize % chunkSize; // calculating the remainder
         int split = 0;
-        for(int i =0; i < numReads; i++){
+        for(int i =0; i < numOfReads; i++){ // loading the data
             split++;
-            loadData(raf, maxReadBufferSize,i, urlString);
+            loadData(fileReader, chunkSize,i, urlString);
         }
-        if(remainingBytes > 0){
+        if(remainingBytes > 0){ // loading the remainder of the data
             System.out.println("last batch of byte");
-            loadData(raf, maxReadBufferSize, split++, urlString);
+            loadData(fileReader, chunkSize, split++, urlString);
         }
-        raf.close();
+        fileReader.close();
     }
-    private void loadData(RandomAccessFile raf, long numBytes, int splitno, String urlString) throws IOException{
-        byte[] buf = new byte[(int)numBytes];
-        int val = raf.read(buf);
-        if(val != -1){
-            String converted  = new String(buf,"UTF-8");
+    private void loadData(RandomAccessFile fileReader, long numOfBytes, int partNumber, String urlString) throws IOException{
+        byte[] buffer = new byte[(int)numOfBytes];
+        int val = fileReader.read(buffer);
+        if(val != -1){ // as long as there is data to insert
+            String converted  = new String(buffer,"UTF-8"); // converting data to UTF-8 TYPE
             try{
-                System.out.println("==== inserted Chunk==" + splitno);
+                System.out.println("==== inserted Chunk==" + partNumber);
                 BoundStatement bound = new BoundStatement(stmt);
-                session.execute(bound.bind(splitno,urlString,converted));
+                session.execute(bound.bind(partNumber,urlString,converted)); // inserting data to the table
             }catch (Exception e){
                 e.printStackTrace();
                 System.out.println("=====>>>>" + e.getMessage());
@@ -66,22 +63,17 @@ public class CassandraApi {
             }
         }
     }
-    public void FetchData(String opFile, String urlString) throws IOException{
-        String scql = "SELECT part_number, url, slice from simplex.contents where url = '"+ urlString +"'";
-        OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream(opFile), "UTF-8");
-        SimpleStatement ss =  new SimpleStatement(scql);
-        ss.setFetchSize(5);
-        ResultSet rs = session.execute(ss);
+    public void FetchData(String urlString) throws IOException{
+        String scql = "SELECT part_number, url, slice from VoyagerLabs.contents where url = '"+ urlString +"'";
+        ResultSet rs = session.execute(scql);
         for(Row row : rs){
-            if(rs.getAvailableWithoutFetching() == 5 && !rs.isFullyFetched()){
+            if(rs.getAvailableWithoutFetching() == 5 && !rs.isFullyFetched()){ // fetching the data out of the table
                 rs.fetchMoreResults();
             }
-            int splitno = row.getInt("part_number");
+            int partNumber = row.getInt("part_number");
             String url = row.getString("url");
             String slice = row.getString("slice");
-            fw.write(slice);
-            System.out.println("Selected Chunk==" + splitno +"; url == " + url);
+            System.out.println("Selected Chunk==" + partNumber +"; url == " + url);
         }
-        fw.close();
     }
 }

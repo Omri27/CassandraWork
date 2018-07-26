@@ -1,4 +1,6 @@
 import com.datastax.driver.core.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -10,7 +12,6 @@ public class Assignment {
     public static void main(String[] args) {
         int chunkSize = 10000;
         String urlString = "https://www.ynet.co.il/";
-        String outFileName = "outDownload.html";
         String inputFileName = "Download.html";
         try {
             CassandraApi cassandra = new CassandraApi();
@@ -25,7 +26,7 @@ public class Assignment {
 
             cassandra.InsertData(inputFileName, chunkSize, urlString); // inserting the chunks of data from the file to cassandra
 
-            cassandra.FetchData(outFileName, urlString); // fetching the data from cassandra table
+            cassandra.FetchData(urlString); // fetching the data from cassandra table
 
             System.out.println("Assignment has finished :)");
 
