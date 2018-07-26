@@ -1,3 +1,5 @@
+
+
 import com.datastax.driver.core.*;
 
 import java.io.*;
@@ -31,7 +33,7 @@ public class CassandraApi {
     public void InsertData(String readFromFile, int chunkSize, String urlString) throws IOException {
         String insertQuery = "INSERT INTO VoyagerLabs.contents (part_number, url, slice) "
                 + "VALUES (?,?,?) ";
-        stmt  = session.prepare(insertQuery);
+        stmt  = session.prepare(insertQuery); // preparing statement for loading data
         RandomAccessFile fileReader = new RandomAccessFile(readFromFile,"r");
         long sourceSize = fileReader.length(); // getting source file size
         long numOfReads = sourceSize/chunkSize; // calculating how many reads according to chunk size
@@ -47,6 +49,7 @@ public class CassandraApi {
         }
         fileReader.close();
     }
+
     private void loadData(RandomAccessFile fileReader, long numOfBytes, int partNumber, String urlString) throws IOException{
         byte[] buffer = new byte[(int)numOfBytes];
         int val = fileReader.read(buffer);

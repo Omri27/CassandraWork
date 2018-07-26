@@ -1,7 +1,10 @@
+
+
 import java.io.*;
+import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
-
+//Omri Kodzidlo - phone number - 0506790773
 public class Assignment {
     public static void main(String[] args) {
         int chunkSize = 10000;
@@ -24,6 +27,7 @@ public class Assignment {
 
             System.out.println("Assignment has finished :)");
 
+            System.exit(0);
         } catch (IOException e) {
             e.printStackTrace();
         }
