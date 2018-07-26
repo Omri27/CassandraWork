@@ -1,12 +1,6 @@
-import com.datastax.driver.core.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Random;
-import java.util.UUID;
 
 public class Assignment {
     public static void main(String[] args) {

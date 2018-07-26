@@ -28,11 +28,11 @@ public class CassandraApi {
         session.execute(createKeySpaceQueryString);
     }
 
-    public void InsertData(String ipFile, int chunkSize, String urlString) throws IOException {
+    public void InsertData(String readFromFile, int chunkSize, String urlString) throws IOException {
         String insertQuery = "INSERT INTO VoyagerLabs.contents (part_number, url, slice) "
                 + "VALUES (?,?,?) ";
         stmt  = session.prepare(insertQuery);
-        RandomAccessFile fileReader = new RandomAccessFile(ipFile,"r");
+        RandomAccessFile fileReader = new RandomAccessFile(readFromFile,"r");
         long sourceSize = fileReader.length(); // getting source file size
         long numOfReads = sourceSize/chunkSize; // calculating how many reads according to chunk size
         long remainingBytes = sourceSize % chunkSize; // calculating the remainder
@@ -64,7 +64,7 @@ public class CassandraApi {
         }
     }
     public void FetchData(String urlString) throws IOException{
-        String scql = "SELECT part_number, url, slice from VoyagerLabs.contents where url = '"+ urlString +"'";
+        String scql = "SELECT part_number, url from VoyagerLabs.contents where url = '"+ urlString +"'";
         ResultSet rs = session.execute(scql);
         for(Row row : rs){
             if(rs.getAvailableWithoutFetching() == 5 && !rs.isFullyFetched()){ // fetching the data out of the table
@@ -72,7 +72,6 @@ public class CassandraApi {
             }
             int partNumber = row.getInt("part_number");
             String url = row.getString("url");
-            String slice = row.getString("slice");
             System.out.println("Selected Chunk==" + partNumber +"; url == " + url);
         }
     }
